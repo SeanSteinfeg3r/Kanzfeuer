@@ -47,7 +47,8 @@
 
     async function fetchData(tableId) {
         try {
-            const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/?user_field_names=true&size=500`;
+            // WICHTIG: size darf maximal 200 sein!
+            const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/?user_field_names=true&size=200`;
             const res = await fetch(url, {
                 headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' }
             });
@@ -59,7 +60,6 @@
             return data.results || [];
         } catch(e) {
             console.error(e);
-            document.getElementById('schichtplan').innerHTML = `<div class="error-msg">Fehler beim Laden: ${e.message}</div>`;
             return [];
         }
     }
@@ -90,7 +90,7 @@
         currentTag = t;
         const c = config[t];
         if (!c || !c.aufgaben || c.aufgaben.length === 0) {
-            document.getElementById('schichtplan').innerHTML = `<h2>${t}</h2><p style="text-align:center;">Keine Konfiguration geladen. Bitte API-Verbindung prüfen.</p>`;
+            document.getElementById('schichtplan').innerHTML = `<h2>${t}</h2><p style="text-align:center;">Daten werden geladen...</p>`;
             return;
         }
 
