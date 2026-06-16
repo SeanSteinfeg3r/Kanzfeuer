@@ -5,78 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sportring Kanzfeuer 2026</title>
   <style>
-    html, body { height:100%; margin:0; padding:0; }
-    body { font-family: Arial, sans-serif; padding: 16px; background: #f9f9f9; }
-    h1, h2 { text-align: center; }
-    .tage-buttons { display: flex; justify-content: center; gap: 10px; margin-bottom: 18px; }
-    button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; background: white; margin-top: 8px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    .input-gruppe { display: flex; gap: 5px; }
-    .schicht-voll { color: #d9534f; font-weight: bold; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+    .input-box { display: flex; gap: 5px; margin-top: 5px; }
   </style>
 </head>
 <body>
   <h1>Sportring Kanzfeuer 2026</h1>
-  <div class="tage-buttons">
-    <button onclick="zeigeTag('Aufbau')">Aufbau</button>
-    <button onclick="zeigeTag('Samstag')">Samstag</button>
-    <button onclick="zeigeTag('Abbau')">Abbau</button>
-  </div>
-  <div id="schichtplan"></div>
+  <div id="schichtplan">Lade Daten...</div>
 
 <script>
-    const BASEROW_API_TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
-    const KONFIG_ID = 1031612;
+    const TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
     const EINTRAEGE_ID = 1031613;
-    
-    // Feld-IDs aus deinem Baserow (basierend auf der Tabellenstruktur)
-    const FIELD_TAG = "field_1031614";
-    const FIELD_ZEIT = "field_1031615";
-    const FIELD_AUFGABE = "field_1031616";
-    const FIELD_NAME = "field_1031617";
+    const KONFIG_ID = 1031612;
 
-    let currentTag = 'Aufbau';
+    // Diese IDs sind fix für deine Tabelle (siehe Baserow API Info)
+    const F_TAG = "field_1031614";
+    const F_ZEIT = "field_1031615";
+    const F_AUFGABE = "field_1031616";
+    const F_NAME = "field_1031617";
+
     let daten = {}, config = {};
 
-    async function loadData() {
-        // Daten abrufen (user_field_names=false für Feld-IDs)
-        const resE = await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=false`, { headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}` } });
-        const resK = await fetch(`https://api.baserow.io/api/database/rows/table/${KONFIG_ID}/?user_field_names=false`, { headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}` } });
+    async function loadAll() {
+        const resE = await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=false`, { headers: { 'Authorization': `Token ${TOKEN}` }});
+        const resK = await fetch(`https://api.baserow.io/api/database/rows/table/${KONFIG_ID}/?user_field_names=false`, { headers: { 'Authorization': `Token ${TOKEN}` }});
         
         const eData = await resE.json();
         const kData = await resK.json();
 
-        // Daten verarbeiten
+        // 1. Einträge verarbeiten
         eData.results.forEach(r => {
-            const t = r[FIELD_TAG];
+            let t = r[F_TAG];
             if(!daten[t]) daten[t] = {};
-            const key = `${r[FIELD_ZEIT]}||${r[FIELD_AUFGABE]}`;
+            let key = `${r[F_ZEIT]}||${r[F_AUFGABE]}`;
             if(!daten[t][key]) daten[t][key] = [];
-            daten[t][key].push(r[FIELD_NAME]);
+            daten[t][key].push(r[F_NAME]);
         });
 
+        // 2. Config verarbeiten
         kData.results.forEach(r => {
-            // Spalte 1 = Tag, Spalte 2 = Konfig (basierend auf API-Output)
-            const tag = Object.values(r)[1];
-            const cfg = Object.values(r)[2];
+            let values = Object.values(r);
+            let tag = values[1]; // Spalte Tag
+            let cfg = values[2]; // Spalte Konfig
             if(tag) config[tag] = JSON.parse(cfg);
         });
-        zeigeTag(currentTag);
+
+        render('Aufbau');
     }
 
-    function zeigeTag(t) {
-        currentTag = t;
-        const c = config[t];
-        let html = `<h2>${t}</h2><table>`;
+    function render(tag) {
+        let c = config[tag];
+        let html = `<h2>${tag}</h2><table>`;
         c.aufgaben.forEach(a => {
-            html += `<tr><th>${a}</th>`;
+            html += `<tr><td>${a}</td>`;
             c.zeiten.forEach(z => {
-                const key = `${z}||${a}`;
-                const list = daten[t]?.[key] || [];
-                const max = c.limits[key] || 3;
-                html += `<td>${list.join(', ')}<br>
-                    ${list.length < max ? `<div class="input-gruppe"><input id="i-${key}" placeholder="Name"><button onclick="eintragen('${key}')">OK</button></div>` : '<span class="schicht-voll">Voll</span>'}
+                let key = `${z}||${a}`;
+                let list = daten[tag]?.[key] || [];
+                html += `<td>${list.join(', ')} 
+                    <div class="input-box"><input id="i-${key}" placeholder="Name"><button onclick="save('${tag}','${z}','${a}')">OK</button></div>
                     </td>`;
             });
             html += `</tr>`;
@@ -84,18 +72,17 @@
         document.getElementById('schichtplan').innerHTML = html + `</table>`;
     }
 
-    async function eintragen(key) {
-        const val = document.getElementById('i-'+key).value;
-        const [z, a] = key.split('||');
+    async function save(t, z, a) {
+        let name = document.getElementById(`i-${z}||${a}`).value;
         await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=false`, {
             method: 'POST',
-            headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ [FIELD_TAG]: currentTag, [FIELD_ZEIT]: z, [FIELD_AUFGABE]: a, [FIELD_NAME]: val })
+            headers: { 'Authorization': `Token ${TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [F_TAG]: t, [F_ZEIT]: z, [F_AUFGABE]: a, [F_NAME]: name })
         });
-        loadData();
+        loadAll();
     }
 
-    loadData();
+    loadAll();
 </script>
 </body>
 </html>
