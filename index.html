@@ -1,5 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sportring Kanzfeuer 2026</title>
+  <style>
+    html, body { height:100%; margin:0; padding:0; }
+    body { font-family: Arial, sans-serif; padding: 16px; margin:0; background: #f9f9f9; min-height:100vh;}
+    h1, h2 { text-align: center; }
+    .tage-buttons { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+    button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; font-size:1.07em; }
+    button:hover { background: #0056b3; }
+    table { width: 100%; border-collapse: collapse; background: white; margin-top: 8px; min-width: 520px; }
+    th, td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; }
+    th { background-color: #eee; }
+    .input-gruppe { display: flex; align-items: stretch; margin-top: 5px; }
+    .input-gruppe input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px 0 0 5px; }
+    .input-gruppe button { border-radius: 0 5px 5px 0; background: #28a745; border: none; color: white; cursor: pointer; padding: 0 10px; }
+    .schicht-voll { color: #d9534f; font-weight: bold; padding: 8px; }
+    .helfer-list { list-style: none; padding: 0; margin: 5px 0; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>Sportring Kanzfeuer 2026</h1>
+  <div class="tage-buttons">
+    <button onclick="zeigeTag('Aufbau')">Aufbau 20.06.</button>
+    <button onclick="zeigeTag('Samstag')">Samstag 20.06.</button>
+    <button onclick="zeigeTag('Abbau')">Abbau 21.06.</button>
+  </div>
+  <div id="schichtplan"></div>
+
 <script>
-    const BASEROW_API_TOKEN = "IFMpLzN7n8NCLtwNOTmlTzIPx9X8oidv";
+    // Aktualisierter Token
+    const BASEROW_API_TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
     const KONFIG_TABLE_ID = 1031612;
     const EINTRAEGE_TABLE_ID = 1031613;
     const BASEROW_URL = "https://api.baserow.io";
@@ -12,12 +45,44 @@
         Abbau: { aufgaben: [], zeiten: [], farben: [], limits: {} }
     };
 
-    // 1. Definiere die Funktionen ZUERST
+    async function fetchData(tableId) {
+        try {
+            const res = await fetch(`${BASEROW_URL}/api/database/rows/table/${tableId}/?user_field_names=true&size=500`, {
+                headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}` }
+            });
+            if (!res.ok) throw new Error("API Fehler: " + res.status);
+            const data = await res.json();
+            return data.results || [];
+        } catch(e) { console.error("Fehler beim Laden:", e); return []; }
+    }
+
+    async function loadAll() {
+        const eintraege = await fetchData(EINTRAEGE_TABLE_ID);
+        const konfigs = await fetchData(KONFIG_TABLE_ID);
+
+        for (let t in daten) daten[t] = {};
+        eintraege.forEach(row => {
+            if (row.Tag && daten[row.Tag]) {
+                const key = `${row.Zeit}||${row.Aufgabe}`;
+                if (!daten[row.Tag][key]) daten[row.Tag][key] = [];
+                daten[row.Tag][key].push(row.Name);
+            }
+        });
+
+        konfigs.forEach(row => {
+            const tagVal = row.Tag ? row.Tag.trim() : "";
+            if (tagVal && config[tagVal] && row.Konfig) {
+                try { config[tagVal] = JSON.parse(row.Konfig); } catch(e) { console.error("JSON Fehler bei " + tagVal, e); }
+            }
+        });
+        zeigeTag(currentTag);
+    }
+
     function zeigeTag(t) {
         currentTag = t;
         const c = config[t];
         if (!c || !c.aufgaben) {
-            document.getElementById('schichtplan').innerHTML = `<h2 style="color:red;">Fehler: Keine Konfiguration für ${t} gefunden.</h2>`;
+            document.getElementById('schichtplan').innerHTML = `<h2 style="text-align:center;">Daten werden geladen oder Tag nicht konfiguriert...</h2>`;
             return;
         }
 
@@ -38,38 +103,6 @@
         document.getElementById('schichtplan').innerHTML = html + `</tbody></table>`;
     }
 
-    async function fetchData(tableId) {
-        try {
-            const res = await fetch(`${BASEROW_URL}/api/database/rows/table/${tableId}/?user_field_names=true&size=500`, {
-                headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}` }
-            });
-            const data = await res.json();
-            return data.results || [];
-        } catch(e) { console.error("Netzwerkfehler:", e); return []; }
-    }
-
-    async function loadAll() {
-        const eintraege = await fetchData(EINTRAEGE_TABLE_ID);
-        const konfigs = await fetchData(KONFIG_TABLE_ID);
-
-        for (let t in daten) daten[t] = {};
-        eintraege.forEach(row => {
-            if (row.Tag && daten[row.Tag]) {
-                const key = `${row.Zeit}||${row.Aufgabe}`;
-                if (!daten[row.Tag][key]) daten[row.Tag][key] = [];
-                daten[row.Tag][key].push(row.Name);
-            }
-        });
-
-        konfigs.forEach(row => {
-            const tagVal = row.Tag ? row.Tag.trim() : "";
-            if (tagVal && config[tagVal] && row.Konfig) {
-                try { config[tagVal] = JSON.parse(row.Konfig); } catch(e) { console.error("JSON Fehler:", e); }
-            }
-        });
-        zeigeTag(currentTag);
-    }
-
     async function eintragen(key) {
         const input = document.getElementById('i-' + key);
         if(!input || !input.value.trim()) return;
@@ -82,6 +115,7 @@
         loadAll();
     }
 
-    // 2. Starte erst wenn alles definiert ist
     loadAll();
 </script>
+</body>
+</html>
