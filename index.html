@@ -19,7 +19,6 @@
     .input-gruppe button { border-radius: 0 5px 5px 0; background: #28a745; border: none; color: white; cursor: pointer; padding: 0 10px; }
     .schicht-voll { color: #d9534f; font-weight: bold; padding: 8px; }
     .helfer-list { list-style: none; padding: 0; margin: 5px 0; font-size: 0.9em; }
-    .admin-section { margin-top: 20px; background: #eef; padding: 14px; border-radius: 9px; max-width: 700px; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
@@ -30,13 +29,6 @@
     <button onclick="zeigeTag('Abbau')">Abbau 21.06.</button>
   </div>
   <div id="schichtplan"></div>
-
-  <div class="admin-section">
-    <button onclick="document.getElementById('adminBereich').style.display='block'">Admin-Modus</button>
-    <div id="adminBereich" style="display:none; margin-top:10px;">
-       Passwort (admin): <input type="password" id="pass"> <button onclick="login()">Login</button>
-    </div>
-  </div>
 
 <script>
     const BASEROW_API_TOKEN = "IFMpLzN7n8NCLtwNOTmlTzIPx9X8oidv";
@@ -96,4 +88,26 @@
                 const list = daten[t][key] || [];
                 const max = c.limits[key] || 3;
                 html += `<td><strong>${list.length}/${max}</strong><ul class="helfer-list">${list.map(n => `<li>${n}</li>`).join('')}</ul>` +
-                        (list.length < max ? `<div class="input-gruppe"><input id="i-${key}" placeholder="Name
+                        (list.length < max ? `<div class="input-gruppe"><input id="i-${key}" placeholder="Name"><button onclick="eintragen('${key}')">OK</button></div>` : `<div class="schicht-voll">Voll</div>`) + `</td>`;
+            });
+            html += `</tr>`;
+        });
+        document.getElementById('schichtplan').innerHTML = html + `</tbody></table>`;
+    }
+
+    async function eintragen(key) {
+        const name = document.getElementById('i-' + key).value.trim();
+        if(!name) return;
+        const [zeit, aufgabe] = key.split('||');
+        await fetch(`${BASEROW_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true`, {
+            method: 'POST',
+            headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ Tag: currentTag, Zeit: zeit, Aufgabe: aufgabe, Name: name })
+        });
+        loadAll();
+    }
+
+    loadAll();
+</script>
+</body>
+</html>
