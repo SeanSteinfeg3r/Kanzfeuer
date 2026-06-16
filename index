@@ -1,164 +1,147 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sportring Ausflug Geiselwind</title>
-    <style>
-        html, body { height:100%; margin:0; padding:0; }
-        body { font-family: Arial, sans-serif; padding: 16px; margin:0; background: #f9f9f9; min-height:100vh;}
-        h1, h2 { text-align: center; }
-        button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; font-size:1.07em; }
-        button:active { background: #2741b5; }
-        button:hover { background: #0056b3; }
-        #schichtplan { margin-bottom:18px;}
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 8px; }
-        th, td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; vertical-align: top; }
-        th { background-color: #eee; }
-        input[type="text"], input[type="password"], input[type="number"], input[type="color"] {
-            padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size:1em; width:100%;
-            box-sizing:border-box;
-        }
-        .helfer-list { list-style: none; margin: 0; padding: 0; text-align: left; }
-        .helfer-list li { 
-            padding: 2px 4px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        
-        .btn-remove {
-            background-color: #dc3545; 
-            color: white;
-            border: none;
-            border-radius: 50%; 
-            width: 20px; 
-            height: 20px; 
-            font-size: 0.8em;
-            line-height: 1; 
-            padding: 0;
-            margin-left: 8px; 
-            cursor: pointer;
-            flex-shrink: 0; 
-            display: flex; 
-            justify-content: center;
-            align-items: center;
-        }
-        .btn-remove:hover {
-            background-color: #c82333;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arbeitsdienst Sportring</title>
+  <style>
+    html, body { height:100%; margin:0; padding:0; }
+    body { font-family: Arial, sans-serif; padding: 16px; margin:0; background: #f9f9f9; min-height:100vh;}
+    h1, h2 { text-align: center; }
+    .tage-buttons { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+    button, .tage-buttons button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; font-size:1.07em; }
+    button:active, .tage-buttons button:active { background: #2741b5; }
+    button:hover, .tage-buttons button:hover { background: #0056b3; }
+    .btn-purple { background: #6f42c1; color: #fff !important; }
+    .btn-purple:hover, .btn-purple:active { background: #5a349c; }
+    #schichtplan { margin-bottom:18px;}
+    table { width: 100%; border-collapse: collapse; background: white; margin-top: 8px; }
+    th, td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; vertical-align: top; }
+    th { background-color: #eee; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="color"] {
+      padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size:1em; width:100%;
+      box-sizing:border-box;
+    }
+    .helfer-list { list-style: none; margin: 0; padding: 0; text-align: left; }
+    .helfer-list li { padding: 2px 4px; }
+    .admin-section { margin-top: 20px; background: #eef; padding: 14px; border-radius: 9px; max-width:700px; margin-left:auto; margin-right:auto;}
+    .debug-block { background:#fffbe6; margin:10px 0; padding:12px; border-radius:8px; font-size:14px; display:none; overflow:auto; white-space:pre-wrap; word-wrap:break-word;}
+    
+    #verantwortlicheBox { display:none; position:fixed; z-index:999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.23);}
+    #verantwortlicheInhalt { background:#fff; max-width:95vw; margin:8vw auto 0 auto; padding:18px 5vw 14px 5vw; border-radius:18px; box-shadow:0 8px 24px rgba(0,0,0,0.21); border:3px solid #22bb33; position:relative; }
+    #verantwortlicheInhalt h2 { color:#22bb33; margin-top:0; font-size:1.4em;}
+    #verantwortlicheInhalt table { width:100%; background:#f6fff8; font-size:1em;}
+    #verantwortlicheInhalt th { background:#1b8f28; color:#fff; font-size:1em; }
+    #verantwortlicheInhalt td, #verantwortlicheInhalt th { border:1px solid #8cb07b; padding:8px 10px; white-space: nowrap; }
+    #verantwortlicheClose { position:absolute; right:14px; top:14px; background:#c4186a; color:#fff; border:none; font-size:1.2em; border-radius:50%; width:30px; height:30px; cursor:pointer; }
+    
+    .input-gruppe { display: flex; align-items: stretch; margin-top: 5px; }
+    .input-gruppe input { flex-grow: 1; border-right: none; border-radius: 5px 0 0 5px; min-width: 50px; padding: 8px;}
+    .input-gruppe button { flex-shrink: 0; border-radius: 0 5px 5px 0; font-size: 1.1em; padding: 8px 12px;}
 
-        .input-gruppe { display: flex; align-items: stretch; margin-top: 5px; }
-        .input-gruppe input { flex-grow: 1; border-right: none; border-radius: 5px 0 0 5px; min-width: 50px; padding: 8px;}
-        .input-gruppe button { flex-shrink: 0; border-radius: 0 5px 5px 0; font-size: 1.1em; padding: 8px 12px;}
+    /* NEU: Stil für die "Schicht voll"-Anzeige */
+    .schicht-voll {
+        margin-top: 10px;
+        padding: 8px;
+        font-weight: bold;
+        color: #28a745; /* Grün */
+        background-color: #eaf6ec;
+        border: 1px solid #a3d9b1;
+        border-radius: 5px;
+        font-size: 0.95em;
+    }
 
-        .schicht-voll {
-            margin-top: 10px;
-            padding: 8px;
-            font-weight: bold;
-            color: #28a745; 
-            background-color: #eaf6ec;
-            border: 1px solid #a3d9b1;
-            border-radius: 5px;
-            font-size: 0.95em;
-        }
-
-        #schichtplan, .scroll-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        
-        /* Styles für Admin-Login-Bereich wieder aktivieren */
-        #loginFeld { margin-top: 9px; }
-        .admin-section { 
-            margin-top: 20px; 
-            background: #eef; 
-            padding: 14px; 
-            border-radius: 9px; 
-            max-width:700px; 
-            margin-left:auto; 
-            margin-right:auto;
-        }
-        .admin-section h2 { margin-top: 0; } 
-        .admin-section input, .admin-section button { margin-bottom:5px; } 
-
-        @media (max-width: 750px) {
-            html, body { padding:0; }
-            h1 { font-size:1.4em;}
-            button { font-size:1em; padding:10px 7px; min-width:95px;} 
-            .admin-section { padding:8px; } 
-        }
-        
-        @media (max-width:550px) {
-            #schichtplan table { font-size:0.95em; }
-            .input-gruppe { flex-direction: column; }
-            .input-gruppe input { border-right: 1px solid #ccc; border-radius: 5px 5px 0 0; text-align: center; font-size: 1.1em; padding: 10px 8px; }
-            .input-gruppe button { width: 100%; border-radius: 0 0 5px 5px; margin-top: -1px; padding: 10px 8px; }
-            th, td { padding: 6px 4px; }
-            .btn-remove { margin-left: 4px; } 
-            .admin-section { font-size:0.99em; } 
-        }
-        
-        table { min-width:520px; }
-    </style>
+    #schichtplan, .scroll-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    
+    @media (max-width: 750px) {
+      html, body { padding:0; }
+      h1 { font-size:1.4em;}
+      .tage-buttons button, button { font-size:1em; padding:10px 7px; min-width:95px;}
+      #verantwortlicheInhalt { width:98vw; padding:11px 1vw 7px 1vw;}
+      #verantwortlicheInhalt table { font-size:0.98em;}
+      #verantwortlicheClose { width:32px; height:32px; right:5px; top:8px;}
+      .admin-section { padding:8px; }
+    }
+    
+    @media (max-width:550px) {
+      .tage-buttons { flex-direction: column; align-items: stretch; }
+      #verantwortlicheInhalt { max-width:99vw; }
+      .admin-section { font-size:0.99em; }
+      #schichtplan table { font-size:0.95em; }
+      .input-gruppe { flex-direction: column; }
+      .input-gruppe input { border-right: 1px solid #ccc; border-radius: 5px 5px 0 0; text-align: center; font-size: 1.1em; padding: 10px 8px; }
+      .input-gruppe button { width: 100%; border-radius: 0 0 5px 5px; margin-top: -1px; padding: 10px 8px; }
+      th, td { padding: 6px 4px; }
+    }
+    
+    table { min-width:520px; }
+    #verantwortlicheInhalt table { min-width:330px;}
+    .admin-section input, .admin-section button { margin-bottom:5px; }
+    .admin-section input[type="color"] { width:44px; min-width:44px; max-width:44px; }
+  </style>
 </head>
 <body>
-    <h1>Sportring Ausflug Geiselwind</h1>
-    <div class="tage-buttons" style="display: none;">
+  <h1>Arbeitsdienst Sportring</h1>
+  <div class="tage-buttons">
+    <button onclick="zeigeTag('Freitag')">Freitag, 13.06.</button>
+    <button onclick="zeigeTag('Samstag')">Samstag, 14.06.</button>
+    <button class="btn-purple" onclick="zeigeVerantwortliche()">Verantwortliche</button>
+  </div>
+  <div id="schichtplan"></div>
+  <div style="margin-top: 18px;">
+    <button onclick="zeigeLogin()">🔑 Admin-Login</button>
+    <div id="loginFeld" style="display: none; margin-top: 9px;">
+      <input id="adminPasswort" type="password" placeholder="Passwort">
+      <button onclick="adminLogin()">Einloggen</button>
     </div>
-    <div id="schichtplan"></div>
+  </div>
+  <div id="adminBereich" class="admin-section" style="display: none;">
+    <h2>Admin-Bereich</h2>
+    <div><input id="aufgabe" placeholder="Neue Aufgabe"><input id="farbe" type="color" value="#ffffcc"><button onclick="aufgabeHinzufuegen()">Aufgabe hinzufügen</button></div>
+    <div><input id="zeit" placeholder="Neue Zeit"><button onclick="zeitHinzufuegen()">Zeit hinzufügen</button><button onclick="zeitLoeschen()">Letzte Zeit löschen</button></div>
+    <div><input id="maxZeit" placeholder="Zeit"><input id="maxAufgabe" placeholder="Aufgabe"><input id="max" type="number" placeholder="Max. Helfer"><button onclick="maxHinzufuegen()">Max setzen</button></div>
+    <button onclick="loeschen()">Letzte Aufgabe löschen</button>
+    <div id="debug-block" class="debug-block" style="display:none"></div>
+  </div>
 
-    <div style="margin-top: 18px;">
-        <button onclick="zeigeLogin()">🔑 Admin-Login</button>
-        <div id="loginFeld" style="display: none;">
-            <input id="adminPasswort" type="password" placeholder="Passwort">
-            <button onclick="adminLogin()">Einloggen</button>
-        </div>
-    </div>
-    <div id="adminBereich" class="admin-section" style="display: none;">
-        <h2>Admin-Bereich</h2>
-        <p>Hier können Admin-Funktionen verwaltet werden (aktuell nur Löschen).</p>
-    </div>
-
+  <div id="verantwortlicheBox" onclick="if(event.target===this)verantwortlicheSchliessen()"><div id="verantwortlicheInhalt"> <button id="verantwortlicheClose" onclick="verantwortlicheSchliessen()" title="Schließen">&times;</button> <h2>Schichtverantwortliche</h2> <div class="scroll-container"> <table><thead><tr><th>Bereich</th><th>Name</th><th>Telefon</th></tr></thead><tbody><tr><td>Arbeitsdienst</td><td>Reinhold Weiß</td><td>01512 2902335</td><tr></tr></tbody></table></div></div></div>
 
 <script>
     // ========== BASEROW Konfiguration ==========
-    const BASEROW_API_TOKEN = "9SQnG2ofpBzKbcfzwyCUY09cCrNtUcL2"; 
-    const BASEROW_SERVER_URL = "https://api.baserow.io"; 
-    const EINTRAEGE_TABLE_ID = 594218; 
+    const BASEROW_API_TOKEN = "IFMpLzN7n8NCLtwNOTmlTzIPx9X8oidv"; // Dein API-Token hier eingefügt
+    const BASEROW_SERVER_URL = "https://api.baserow.io";
+    const EINTRAEGE_TABLE_ID = 570400; 
+    const KONFIG_TABLE_ID    = 570401;
     // ===========================================
 
-    let admin = false; 
-    let tag = 'Teams'; 
-    let isLoadingData = false;
+    let admin = false;
+    // Setze den initialen Tag auf einen der neuen Tage
+    let tag = 'Freitag'; // Oder 'Samstag'
 
-    const daten = { 'Teams': {} };
-    const config = {
-        'Teams': {
-            rollen: ['Betreuer', 'Kind'],
-            teams: ['Team 1', 'Team 2', 'Team 3', 'Team 4', 'Team 5', 'Team 6'],
-            limits: {
-                'Betreuer': 5,
-                'Kind': 10
-            }
-        }
+    // PASSE DIESE VARIABLENDEFINITION NACH OBEN AN!
+    let isLoadingData = false; // <<< Diese Zeile wurde hierher verschoben
+
+    // Passe die verfügbaren Tage in den daten und config Objekten an
+    const daten = { Freitag: {}, Samstag: {} };
+    const config = { 
+        Freitag: { aufgaben: [], zeiten: [], farben: [], limits: {} }, 
+        Samstag: { aufgaben: [], zeiten: [], farben: [], limits: {} }
     };
 
-    config.Teams.teams.forEach(team => {
-        config.Teams.rollen.forEach(rolle => {
-            daten.Teams[`${team}||${rolle}`] = [];
-        });
-    });
+    // --- Der Rest des JavaScript-Codes bleibt unverändert, aber hier ist die angepasste zeigeTag-Funktion zur Referenz ---
 
     async function fetchBaserow(method, url, body = null) {
-        const headers = { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' };
-        const options = { method, headers };
-        if (body) options.body = JSON.stringify(body);
-        const response = await fetch(url, options);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Baserow API Fehler: ${response.status}`, errorText);
-            throw new Error(`Baserow API Fehler: ${response.status} - ${errorText}`);
-        }
-        if (response.status === 204) return { success: true }; 
-        try { return await response.json(); } catch (e) { return { success: true }; }
+      const headers = { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' };
+      const options = { method, headers };
+      if (body) options.body = JSON.stringify(body);
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Baserow API Fehler: ${response.status}`, errorText);
+        throw new Error(`Baserow API Fehler: ${response.status} - ${errorText}`);
+      }
+      if (response.status === 204) return { success: true }; 
+      try { return await response.json(); } catch (e) { return { success: true }; }
     }
 
     async function ladeDaten() {
@@ -179,35 +162,22 @@
                 } catch (error) { console.error(`Paginierungs-Fehler. Stoppe.`, error); nextUrl = null; }
             }
             console.log(`LADEN ABGESCHLOSSEN: Insgesamt ${allRows.length} Helfer-Einträge geladen.`);
-            
-            daten.Teams = {};
-            config.Teams.teams.forEach(teamName => {
-                config.Teams.rollen.forEach(rolleName => {
-                    daten.Teams[`${teamName}||${rolleName}`] = [];
-                });
-            });
-
+            // Nur die relevanten Tage im daten-Objekt zurücksetzen
+            for (const t in daten) daten[t] = {};
             for (const row of allRows) {
-                if (!row.id || !row.Tag || !row.Team || !row.Rolle || !row.Name) { 
-                    console.warn(`Eintrag übersprungen (ID ${row.id}):`, row); 
-                    continue; 
-                };
-                
-                const tagVal = String(row.Tag).trim();
-                const teamVal = String(row.Team.value).trim();    
-                const rolleVal = String(row.Rolle.value).trim(); 
-                const nameVal = String(row.Name).trim(); 
-                
-                const key = `${teamVal}||${rolleVal}`; 
-                
-                if (tagVal === 'Teams') {
-                    if (!daten.Teams[key]) {
-                        daten.Teams[key] = [];
-                    }
-                    daten.Teams[key].push({ name: nameVal, id: row.id }); 
-                }
+              if (!row.Tag || !row.Zeit || !row.Aufgabe || !row.Name) { console.warn(`Eintrag übersprungen (ID ${row.id}):`, row); continue; };
+              const tagVal = String(row.Tag).trim(); 
+              // Nur relevante Tage verarbeiten
+              if (tagVal !== 'Freitag' && tagVal !== 'Samstag') { continue; } 
+
+              const zeitVal = String(row.Zeit).trim(); const aufgabeVal = String(row.Aufgabe).trim(); const nameVal = String(row.Name).trim(); const key = `${zeitVal}||${aufgabeVal}`;
+              if (!daten[tagVal]) daten[tagVal] = {}; // Sollte durch die Initialisierung oben abgedeckt sein
+              if (!daten[tagVal][key]) daten[tagVal][key] = [];
+              daten[tagVal][key].push(nameVal);
             }
+            await ladeKonfiguration();
             zeigeTag(tag);
+            zeigeDebug();
         } catch (error) {
             alert("Fehler beim Laden der Daten (Baserow): " + error.message);
         } finally {
@@ -216,135 +186,168 @@
         }
     }
 
-    function zeigeLogin() { 
-        document.getElementById('loginFeld').style.display = 'block'; 
-        document.getElementById('adminPasswort').focus(); 
+    async function ladeKonfiguration() {
+      const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${KONFIG_TABLE_ID}/?user_field_names=true&size=200`;
+      // Nur die relevanten Tage im config-Objekt zurücksetzen
+      config.Freitag = { aufgaben: [], zeiten: [], farben: [], limits: {} };
+      config.Samstag = { aufgaben: [], zeiten: [], farben: [], limits: {} };
+
+      try {
+        const data = await fetchBaserow('GET', url);
+        for (const row of data.results) {
+          if (row.Tag && row.Konfig) {
+            const rowTag = String(row.Tag).trim();
+            // Nur relevante Tage verarbeiten
+            if (rowTag === 'Freitag' || rowTag === 'Samstag') {
+                try { config[rowTag] = JSON.parse(row.Konfig); } 
+                catch (e) { config[rowTag] = { aufgaben: [], zeiten: [], farben: [], limits: {} }; }
+            }
+          }
+        }
+      } catch (err) { alert("Fehler beim Laden der Konfiguration (Baserow): " + err.message); }
     }
-    function adminLogin() { 
-        // PASSSWORT WURDE HIER GEÄNDERT
-        if (document.getElementById('adminPasswort').value === 'SRB1925') { 
-            admin = true; 
-            document.getElementById('adminBereich').style.display = 'block'; 
-            document.getElementById('loginFeld').style.display = 'none'; 
-            zeigeTag(tag); 
-            alert("Erfolgreich als Admin eingeloggt!");
-        } else { 
-            alert("Falsches Passwort!"); 
-        } 
-    }
+
+    function zeigeLogin() { document.getElementById('loginFeld').style.display = 'block'; }
+    function adminLogin() { if (document.getElementById('adminPasswort').value === 'admin') { admin = true; document.getElementById('adminBereich').style.display = 'block'; document.getElementById('loginFeld').style.display = 'none'; document.getElementById('debug-block').style.display = 'block'; zeigeTag(tag); zeigeDebug(); } else { alert("Falsches Passwort!"); } }
+
+    function zeigeVerantwortliche() { document.getElementById('verantwortlicheBox').style.display = 'block'; }
+    function verantwortlicheSchliessen() { document.getElementById('verantwortlicheBox').style.display = 'none'; }
 
     function zeigeTag(t) {
-        tag = String(t).trim(); 
-        const conf = config[tag];
-        if (!conf || !conf.teams?.length || !conf.rollen?.length) {
-            document.getElementById('schichtplan').innerHTML = `<h2>${tag}</h2><p>Keine Konfiguration für diesen Bereich vorhanden.</p>`;
-            return;
-        }
+      tag = String(t).trim();
+      const conf = config[tag];
+      if (!conf || !conf.aufgaben?.length || !conf.zeiten?.length) {
+        document.getElementById('schichtplan').innerHTML = `<h2>${tag}</h2><p>Keine Konfiguration für diesen Tag vorhanden. Bitte im Admin-Bereich Aufgaben und Zeiten hinzufügen.</p>`;
+        return;
+      }
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const tbody = document.createElement('tbody');
+      const head = document.createElement('tr');
+      head.appendChild(document.createElement('th'));
+      conf.zeiten.forEach(z => { const th = document.createElement('th'); th.textContent = String(z).trim(); head.appendChild(th); });
+      thead.appendChild(head);
+      const plan = daten[tag];
+      conf.aufgaben.forEach((a, ai) => {
+        const row = document.createElement('tr');
+        const th = document.createElement('th');
+        th.textContent = String(a).trim();
+        th.style.background = conf.farben?.[ai] || '#fff';
+        row.appendChild(th);
+        conf.zeiten.forEach(z => {
+          const zeitKeyPart = String(z).trim();
+          const aufgabeKeyPart = String(a).trim();
+          const key = `${zeitKeyPart}||${aufgabeKeyPart}`;
+          const list = plan?.[key] || [];
+          const max = conf.limits?.[key] || 3;
+          const td = document.createElement('td');
+          
+          let eingabeHtml = '';
+          // *** HIER IST DIE NEUE LOGIK ***
+          if (list.length < max) {
+            // Wenn die Schicht NICHT voll ist, zeige Eingabefeld und Button an
+            eingabeHtml = 
+              `<div class="input-gruppe">` +
+                `<input id="name-${key}" placeholder="Name" onkeydown="if(event.key==='Enter')umschalten('${key}')">` +
+                `<button onclick="umschalten('${key}')" title="Eintragen">✔️</button>` +
+              `</div>`;
+          } else {
+            // Wenn die Schicht VOLL ist, zeige eine Meldung an
+            eingabeHtml = `<div class="schicht-voll">✔️ Voll</div>`;
+          }
 
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const tbody = document.createElement('tbody');
-
-        const head = document.createElement('tr');
-        head.appendChild(document.createElement('th')); 
-        conf.teams.forEach(teamName => {
-            const th = document.createElement('th');
-            th.textContent = String(teamName).trim();
-            head.appendChild(th);
+          td.innerHTML = `<strong>${list.length}/${max}</strong><ul class="helfer-list">${list.map(n => `<li>${n}</li>`).join('')}</ul>${eingabeHtml}`;
+          row.appendChild(td);
         });
-        thead.appendChild(head);
-
-        const plan = daten[tag]; 
-
-        conf.rollen.forEach((rolle, ri) => {
-            const row = document.createElement('tr');
-            const th = document.createElement('th');
-            th.textContent = String(rolle).trim();
-            th.style.background = (rolle === 'Betreuer') ? '#e6f2ff' : '#f0f0f0'; 
-            row.appendChild(th);
-
-            conf.teams.forEach(teamName => {
-                const key = `${String(teamName).trim()}||${String(rolle).trim()}`;
-                const list = plan?.[key] || [];
-                const max = conf.limits?.[rolle] || 0; 
-                
-                const td = document.createElement('td');
-                
-                let eingabeHtml = '';
-                if (list.length < max) {
-                    eingabeHtml = 
-                        `<div class="input-gruppe">` +
-                        `<input id="name-${key}" placeholder="Name" onkeydown="if(event.key==='Enter')umschalten('${key}')">` +
-                        `<button onclick="umschalten('${key}')" title="Eintragen">✔️</button>` +
-                        `</div>`;
-                } else {
-                    eingabeHtml = `<div class="schicht-voll">✔️ Voll</div>`;
-                }
-
-                td.innerHTML = `<strong>${list.length}/${max}</strong><ul class="helfer-list">${list.map(item => `<li>${item.name} ${admin ? `<button class="btn-remove" onclick="austragen('${item.id}')">X</button>` : ''}</li>`).join('')}</ul>${eingabeHtml}`;
-                row.appendChild(td);
-            });
-            tbody.appendChild(row);
-        });
-
-        table.appendChild(thead);
-        table.appendChild(tbody);
-        document.getElementById('schichtplan').innerHTML = `<h2>${tag}</h2>`;
-        document.getElementById('schichtplan').appendChild(table);
+        tbody.appendChild(row);
+      });
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      document.getElementById('schichtplan').innerHTML = `<h2>${tag}</h2>`;
+      document.getElementById('schichtplan').appendChild(table);
     }
 
     async function umschalten(key) {
-        const input = document.getElementById('name-' + key);
-        const name = input.value.trim();
-        if (!name) return;
-
-        const [teamName, rolle] = key.split('||'); 
-        
-        const list = daten[tag]?.[key] || [];
-        const max = config[tag]?.limits?.[rolle] || 0; 
-
-        if (list.length >= max) {
-            alert(`Maximale Anzahl an ${rolle}n für ${teamName} bereits erreicht!`);
-            input.value = ""; 
-            return;
-        }
-
-        const rowData = { "Tag": tag, "Team": teamName, "Rolle": rolle, "Name": name };
-        
-        try {
-            const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true`;
-            await fetchBaserow('POST', url, rowData);
-            await ladeDaten(); 
-            input.value = "";
-        } catch (err) {
-            alert("Speichern fehlgeschlagen! Siehe Konsole.");
-            console.error("Fehler beim Speichern des Helfers:", err);
-        }
+      const input = document.getElementById('name-' + key);
+      const name = input.value.trim();
+      if (!name) return;
+      const [zeit, aufgabe] = key.split('||');
+      const list = daten[tag]?.[key] || [];
+      const max = config[tag]?.limits?.[key] || 3;
+      if (list.length >= max) {
+        alert("Maximale Anzahl an Helfern für diese Schicht bereits erreicht!");
+        input.value = ""; return;
+      }
+      const rowData = { "Tag": tag, "Zeit": zeit, "Aufgabe": aufgabe, "Name": name };
+      try {
+        const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true`;
+        await fetchBaserow('POST', url, rowData);
+        await ladeDaten();
+        input.value = "";
+      } catch (err) {
+        alert("Speichern fehlgeschlagen! Siehe Konsole.");
+        console.error("Fehler beim Speichern des Helfers:", err);
+      }
     }
 
-    async function austragen(rowId) {
-        if (!admin) {
-            alert("Sie sind nicht als Admin eingeloggt und dürfen keine Einträge löschen.");
-            return;
-        }
+    async function aufgabeHinzufuegen() {
+      const a = document.getElementById('aufgabe').value.trim(); const f = document.getElementById('farbe').value;
+      if (a) { if (!config[tag]) config[tag] = { aufgaben: [], zeiten: [], farben: [], limits: {} }; if(!config[tag].aufgaben) config[tag].aufgaben = []; if(!config[tag].farben) config[tag].farben = []; config[tag].aufgaben.push(a); config[tag].farben.push(f); await speichereKonfiguration(); }
+    }
+    async function zeitHinzufuegen() {
+      const z = document.getElementById('zeit').value.trim();
+      if (z) { if (!config[tag]) config[tag] = { aufgaben: [], zeiten: [], farben: [], limits: {} }; if(!config[tag].zeiten) config[tag].zeiten = []; if (!config[tag].zeiten.includes(z)) { config[tag].zeiten.push(z); await speichereKonfiguration(); } else { alert("Diese Zeit existiert bereits."); } }
+    }
+    async function zeitLoeschen() { if (config[tag]?.zeiten?.length > 0) { config[tag].zeiten.pop(); await speichereKonfiguration(); } else { alert("Keine Zeiten zum Löschen."); } }
+    async function maxHinzufuegen() {
+      const z = document.getElementById('maxZeit').value.trim(); const a = document.getElementById('maxAufgabe').value.trim(); const m = parseInt(document.getElementById('max').value);
+      if (z && a && !isNaN(m)) { const key = `${z}||${a}`; if (!config[tag]) config[tag] = { aufgaben: [], zeiten: [], farben: [], limits: {} }; if (!config[tag].limits) config[tag].limits = {}; config[tag].limits[key] = m; await speichereKonfiguration(); } else { alert("Bitte gültige Daten eingeben."); }
+    }
+    async function loeschen() { if (config[tag]?.aufgaben?.length > 0) { config[tag].aufgaben.pop(); if (config[tag].farben?.length > 0) config[tag].farben.pop(); await speichereKonfiguration(); } else { alert("Keine Aufgaben zum Löschen."); } }
 
-        if (!confirm("Soll dieser Eintrag wirklich gelöscht werden?")) {
-            return;
+    async function speichereKonfiguration() {
+      const getUrl = `${BASEROW_SERVER_URL}/api/database/rows/table/${KONFIG_TABLE_ID}/?user_field_names=true&size=200`;
+      let existingId = null;
+      try {
+        const data = await fetchBaserow('GET', getUrl);
+        const existingRow = data.results.find(row => row.Tag === tag);
+        if (existingRow) existingId = existingRow.id;
+      } catch (e) { console.warn("Konnte existierende Konfig nicht abrufen, versuche trotzdem zu speichern.", e); }
+      const rowData = { "Konfig": JSON.stringify(config[tag]) };
+      try {
+        if (existingId) {
+          const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${KONFIG_TABLE_ID}/${existingId}/?user_field_names=true`;
+          await fetchBaserow('PATCH', url, rowData);
+        } else {
+          const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${KONFIG_TABLE_ID}/?user_field_names=true`;
+          await fetchBaserow('POST', url, { "Tag": tag, ...rowData });
         }
+        await ladeDaten();
+      } catch (err) {
+        alert("Fehler beim Speichern der Konfiguration!");
+        console.error("Fehler bei speichereKonfiguration:", err);
+      }
+    }
 
-        try {
-            const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/${rowId}/?user_field_names=true`;
-            await fetchBaserow('DELETE', url);
-            console.log(`Eintrag mit ID ${rowId} erfolgreich gelöscht.`);
-            await ladeDaten(); 
-        } catch (err) {
-            alert("Fehler beim Löschen des Eintrags! Siehe Konsole.");
-            console.error("Fehler bei austragen:", err);
-        }
+    function zeigeDebug() {
+      if (!admin) { document.getElementById('debug-block').style.display = 'none'; return; }
+      document.getElementById('debug-block').style.display = 'block';
+      const conf = config[tag];
+      let html = `<b>Tag:</b> ${tag}<br><br>`;
+      html += `<b>Config[${tag}]:</b>\n${conf ? JSON.stringify(conf, null, 2) : 'Nicht definiert'}<br>`;
+      html += "<hr><b>Aktuelle Einträge:</b><br>";
+      if (!daten[tag] || Object.keys(daten[tag]).length === 0) {
+        html += "<em>Keine geladenen Helfer-Daten für diesen Tag.</em>";
+      } else {
+        for (const key in daten[tag]) { html += `<b>${key}</b>: ${JSON.stringify(daten[tag][key])}<br>`; }
+      }
+      document.getElementById('debug-block').innerHTML = html.replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
     // Initial load
     ladeDaten();
+    // Zeige direkt den ersten Tag an, wenn die Seite geladen wird
+    zeigeTag('Freitag');
 </script>
 </body>
 </html>
