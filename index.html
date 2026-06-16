@@ -68,8 +68,11 @@
 
         // Config laden
         konfigs.forEach(row => {
-            if (config[row.Tag]) {
-                try { config[row.Tag] = JSON.parse(row.Konfig); } catch(e) {}
+            const tagVal = row.Tag ? row.Tag.trim() : "";
+            if (tagVal && config[tagVal]) {
+                try { 
+                    config[tagVal] = JSON.parse(row.Konfig); 
+                } catch(e) { console.error("JSON Fehler bei Tag " + tagVal, e); }
             }
         });
         zeigeTag(currentTag);
@@ -78,36 +81,9 @@
     function zeigeTag(t) {
         currentTag = t;
         const c = config[t];
-        let html = `<h2>${t}</h2><table><thead><tr><th>Aufgabe</th>` + 
-                   c.zeiten.map(z => `<th>${z}</th>`).join('') + `</tr></thead><tbody>`;
-        
-        c.aufgaben.forEach((aufg, i) => {
-            html += `<tr><th style="background:${c.farben[i] || '#fff'}">${aufg}</th>`;
-            c.zeiten.forEach(zeit => {
-                const key = `${zeit}||${aufg}`;
-                const list = daten[t][key] || [];
-                const max = c.limits[key] || 3;
-                html += `<td><strong>${list.length}/${max}</strong><ul class="helfer-list">${list.map(n => `<li>${n}</li>`).join('')}</ul>` +
-                        (list.length < max ? `<div class="input-gruppe"><input id="i-${key}" placeholder="Name"><button onclick="eintragen('${key}')">OK</button></div>` : `<div class="schicht-voll">Voll</div>`) + `</td>`;
-            });
-            html += `</tr>`;
-        });
-        document.getElementById('schichtplan').innerHTML = html + `</tbody></table>`;
-    }
+        if (!c || !c.aufgaben || c.aufgaben.length === 0) {
+            document.getElementById('schichtplan').innerHTML = `<h2>${t}</h2><p style="text-align:center;">Keine Aufgaben konfiguriert.</p>`;
+            return;
+        }
 
-    async function eintragen(key) {
-        const name = document.getElementById('i-' + key).value.trim();
-        if(!name) return;
-        const [zeit, aufgabe] = key.split('||');
-        await fetch(`${BASEROW_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true`, {
-            method: 'POST',
-            headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ Tag: currentTag, Zeit: zeit, Aufgabe: aufgabe, Name: name })
-        });
-        loadAll();
-    }
-
-    loadAll();
-</script>
-</body>
-</html>
+        let html = `<h2>${t}</h2>
