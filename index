@@ -5,22 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sportring Kanzfeuer 2026</title>
   <style>
-    /* Dein CSS bleibt gleich */
     html, body { height:100%; margin:0; padding:0; }
     body { font-family: Arial, sans-serif; padding: 16px; margin:0; background: #f9f9f9; min-height:100vh;}
     h1, h2 { text-align: center; }
     .tage-buttons { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-    button, .tage-buttons button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; font-size:1.07em; }
+    button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; font-size:1.07em; }
     button:hover { background: #0056b3; }
-    .btn-purple { background: #6f42c1; }
     table { width: 100%; border-collapse: collapse; background: white; margin-top: 8px; min-width: 520px; }
     th, td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; }
     th { background-color: #eee; }
     .input-gruppe { display: flex; align-items: stretch; margin-top: 5px; }
     .input-gruppe input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px 0 0 5px; }
-    .input-gruppe button { border-radius: 0 5px 5px 0; }
-    .schicht-voll { color: #28a745; font-weight: bold; padding: 8px; }
-    .admin-section { margin-top: 20px; background: #eef; padding: 14px; border-radius: 9px; }
+    .input-gruppe button { border-radius: 0 5px 5px 0; background: #28a745; border: none; color: white; cursor: pointer; padding: 0 10px; }
+    .schicht-voll { color: #d9534f; font-weight: bold; padding: 8px; }
+    .helfer-list { list-style: none; padding: 0; margin: 5px 0; font-size: 0.9em; }
+    .admin-section { margin-top: 20px; background: #eef; padding: 14px; border-radius: 9px; max-width: 700px; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
@@ -32,70 +31,69 @@
   </div>
   <div id="schichtplan"></div>
 
-<script>
-    // --- NEUE IDs EINGETRAGEN ---
-    const BASEROW_API_TOKEN = "IFMpLzN7n8NCLtwNOTmlTzIPx9X8oidv"; 
-    const BASEROW_SERVER_URL = "https://api.baserow.io";
-    const KONFIG_TABLE_ID    = 1031612; 
-    const EINTRAEGE_TABLE_ID = 1031613;
+  <div class="admin-section">
+    <button onclick="document.getElementById('adminBereich').style.display='block'">Admin-Modus</button>
+    <div id="adminBereich" style="display:none; margin-top:10px;">
+       Passwort (admin): <input type="password" id="pass"> <button onclick="login()">Login</button>
+    </div>
+  </div>
 
-    let tag = 'Aufbau';
-    const daten = { Aufbau: {}, Samstag: {}, Abbau: {} };
-    const config = { 
-        Aufbau: { aufgaben: [], zeiten: [], farben: [], limits: {} }, 
+<script>
+    const BASEROW_API_TOKEN = "IFMpLzN7n8NCLtwNOTmlTzIPx9X8oidv";
+    const KONFIG_TABLE_ID = 1031612;
+    const EINTRAEGE_TABLE_ID = 1031613;
+    const BASEROW_URL = "https://api.baserow.io";
+
+    let currentTag = 'Aufbau';
+    let daten = { Aufbau: {}, Samstag: {}, Abbau: {} };
+    let config = {
+        Aufbau: { aufgaben: [], zeiten: [], farben: [], limits: {} },
         Samstag: { aufgaben: [], zeiten: [], farben: [], limits: {} },
         Abbau: { aufgaben: [], zeiten: [], farben: [], limits: {} }
     };
 
-    async function fetchBaserow(method, url, body = null) {
-      const options = { 
-        method, 
-        headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' } 
-      };
-      if (body) options.body = JSON.stringify(body);
-      const res = await fetch(url, options);
-      return res.status === 204 ? { success: true } : await res.json();
+    async function fetchData(tableId) {
+        const res = await fetch(`${BASEROW_URL}/api/database/rows/table/${tableId}/?user_field_names=true&size=500`, {
+            headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}` }
+        });
+        const data = await res.json();
+        return data.results;
     }
 
-    async function ladeDaten() {
-        const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true&size=200`;
-        const data = await fetchBaserow('GET', url);
-        
-        // Zurücksetzen
-        for (const t in daten) daten[t] = {};
-        
-        for (const row of data.results) {
-            const t = String(row.Tag).trim();
-            if (daten.hasOwnProperty(t)) {
+    async function loadAll() {
+        const eintraege = await fetchData(EINTRAEGE_TABLE_ID);
+        const konfigs = await fetchData(KONFIG_TABLE_ID);
+
+        // Daten reset
+        for (let t in daten) daten[t] = {};
+        eintraege.forEach(row => {
+            if (daten[row.Tag]) {
                 const key = `${row.Zeit}||${row.Aufgabe}`;
-                if (!daten[t][key]) daten[t][key] = [];
-                daten[t][key].push(row.Name);
+                if (!daten[row.Tag][key]) daten[row.Tag][key] = [];
+                daten[row.Tag][key].push(row.Name);
             }
-        }
-        await ladeKonfiguration();
-    }
+        });
 
-    async function ladeKonfiguration() {
-        const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${KONFIG_TABLE_ID}/?user_field_names=true&size=200`;
-        const data = await fetchBaserow('GET', url);
-        for (const row of data.results) {
-            if (row.Tag && config.hasOwnProperty(row.Tag)) {
+        // Config laden
+        konfigs.forEach(row => {
+            if (config[row.Tag]) {
                 try { config[row.Tag] = JSON.parse(row.Konfig); } catch(e) {}
             }
-        }
-        zeigeTag(tag);
+        });
+        zeigeTag(currentTag);
     }
 
     function zeigeTag(t) {
-        tag = t;
-        const conf = config[t];
-        let html = `<h2>${t}</h2><table>`;
-        // Tabellenkopf und Zeilen... (deine bisherige Logik hier beibehalten)
-        // ... (Der Code hier kann 1:1 von deinem vorherigen Skript übernommen werden)
-        document.getElementById('schichtplan').innerHTML = html;
-    }
-
-    ladeDaten();
-</script>
-</body>
-</html>
+        currentTag = t;
+        const c = config[t];
+        let html = `<h2>${t}</h2><table><thead><tr><th>Aufgabe</th>` + 
+                   c.zeiten.map(z => `<th>${z}</th>`).join('') + `</tr></thead><tbody>`;
+        
+        c.aufgaben.forEach((aufg, i) => {
+            html += `<tr><th style="background:${c.farben[i] || '#fff'}">${aufg}</th>`;
+            c.zeiten.forEach(zeit => {
+                const key = `${zeit}||${aufg}`;
+                const list = daten[t][key] || [];
+                const max = c.limits[key] || 3;
+                html += `<td><strong>${list.length}/${max}</strong><ul class="helfer-list">${list.map(n => `<li>${n}</li>`).join('')}</ul>` +
+                        (list.length < max ? `<div class="input-gruppe"><input id="i-${key}" placeholder="Name
