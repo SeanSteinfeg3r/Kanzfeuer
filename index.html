@@ -19,6 +19,7 @@
     .input-gruppe button { border-radius: 0 5px 5px 0; background: #28a745; border: none; color: white; cursor: pointer; padding: 0 10px; }
     .schicht-voll { color: #d9534f; font-weight: bold; padding: 8px; }
     .helfer-list { list-style: none; padding: 0; margin: 5px 0; font-size: 0.9em; }
+    .error-msg { color: red; text-align: center; font-weight: bold; padding: 10px; }
   </style>
 </head>
 <body>
@@ -31,7 +32,6 @@
   <div id="schichtplan"></div>
 
 <script>
-    // Aktualisierter Token
     const BASEROW_API_TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
     const KONFIG_TABLE_ID = 1031612;
     const EINTRAEGE_TABLE_ID = 1031613;
@@ -47,13 +47,21 @@
 
     async function fetchData(tableId) {
         try {
-            const res = await fetch(`${BASEROW_URL}/api/database/rows/table/${tableId}/?user_field_names=true&size=500`, {
-                headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}` }
+            const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/?user_field_names=true&size=500`;
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' }
             });
-            if (!res.ok) throw new Error("API Fehler: " + res.status);
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || "API Fehler: " + res.status);
+            }
             const data = await res.json();
             return data.results || [];
-        } catch(e) { console.error("Fehler beim Laden:", e); return []; }
+        } catch(e) {
+            console.error(e);
+            document.getElementById('schichtplan').innerHTML = `<div class="error-msg">Fehler beim Laden: ${e.message}</div>`;
+            return [];
+        }
     }
 
     async function loadAll() {
@@ -72,7 +80,7 @@
         konfigs.forEach(row => {
             const tagVal = row.Tag ? row.Tag.trim() : "";
             if (tagVal && config[tagVal] && row.Konfig) {
-                try { config[tagVal] = JSON.parse(row.Konfig); } catch(e) { console.error("JSON Fehler bei " + tagVal, e); }
+                try { config[tagVal] = JSON.parse(row.Konfig); } catch(e) { console.error("JSON Fehler:", e); }
             }
         });
         zeigeTag(currentTag);
@@ -81,8 +89,8 @@
     function zeigeTag(t) {
         currentTag = t;
         const c = config[t];
-        if (!c || !c.aufgaben) {
-            document.getElementById('schichtplan').innerHTML = `<h2 style="text-align:center;">Daten werden geladen oder Tag nicht konfiguriert...</h2>`;
+        if (!c || !c.aufgaben || c.aufgaben.length === 0) {
+            document.getElementById('schichtplan').innerHTML = `<h2>${t}</h2><p style="text-align:center;">Keine Konfiguration geladen. Bitte API-Verbindung prüfen.</p>`;
             return;
         }
 
@@ -107,12 +115,15 @@
         const input = document.getElementById('i-' + key);
         if(!input || !input.value.trim()) return;
         const [zeit, aufgabe] = key.split('||');
-        await fetch(`${BASEROW_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true`, {
-            method: 'POST',
-            headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ Tag: currentTag, Zeit: zeit, Aufgabe: aufgabe, Name: input.value.trim() })
-        });
-        loadAll();
+        try {
+            const res = await fetch(`${BASEROW_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true`, {
+                method: 'POST',
+                headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Tag: currentTag, Zeit: zeit, Aufgabe: aufgabe, Name: input.value.trim() })
+            });
+            if (res.ok) loadAll();
+            else alert("Fehler beim Eintragen.");
+        } catch(e) { alert("Netzwerkfehler."); }
     }
 
     loadAll();
