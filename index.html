@@ -6,80 +6,61 @@
   <title>Sportring Kanzfeuer 2026</title>
   <style>
     html, body { height:100%; margin:0; padding:0; }
-    body { font-family: Arial, sans-serif; padding: 16px; margin:0; background: #f9f9f9; min-height:100vh;}
+    body { font-family: Arial, sans-serif; padding: 16px; background: #f9f9f9; }
     h1, h2 { text-align: center; }
-    .tage-buttons { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-    button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; font-size:1.07em; }
-    button:hover { background: #0056b3; }
-    table { width: 100%; border-collapse: collapse; background: white; margin-top: 8px; min-width: 520px; }
-    th, td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; }
-    th { background-color: #eee; }
-    .input-gruppe { display: flex; align-items: stretch; margin-top: 5px; }
-    .input-gruppe input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px 0 0 5px; }
-    .input-gruppe button { border-radius: 0 5px 5px 0; background: #28a745; border: none; color: white; cursor: pointer; padding: 0 10px; }
-    .schicht-voll { color: #d9534f; font-weight: bold; padding: 8px; }
-    .helfer-list { list-style: none; padding: 0; margin: 5px 0; font-size: 0.9em; }
+    .tage-buttons { display: flex; justify-content: center; gap: 10px; margin-bottom: 18px; }
+    button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; background: white; margin-top: 8px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    .input-gruppe { display: flex; gap: 5px; }
+    .schicht-voll { color: #d9534f; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>Sportring Kanzfeuer 2026</h1>
   <div class="tage-buttons">
-    <button onclick="zeigeTag('Aufbau')">Aufbau 20.06.</button>
-    <button onclick="zeigeTag('Samstag')">Samstag 20.06.</button>
-    <button onclick="zeigeTag('Abbau')">Abbau 21.06.</button>
+    <button onclick="zeigeTag('Aufbau')">Aufbau</button>
+    <button onclick="zeigeTag('Samstag')">Samstag</button>
+    <button onclick="zeigeTag('Abbau')">Abbau</button>
   </div>
   <div id="schichtplan"></div>
 
 <script>
     const BASEROW_API_TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
-    const KONFIG_TABLE_ID = 1031612;
-    const EINTRAEGE_TABLE_ID = 1031613;
-    const BASEROW_URL = "https://api.baserow.io";
+    const KONFIG_ID = 1031612;
+    const EINTRAEGE_ID = 1031613;
+    
+    // Feld-IDs aus deinem Baserow (basierend auf der Tabellenstruktur)
+    const FIELD_TAG = "field_1031614";
+    const FIELD_ZEIT = "field_1031615";
+    const FIELD_AUFGABE = "field_1031616";
+    const FIELD_NAME = "field_1031617";
 
     let currentTag = 'Aufbau';
-    let daten = { Aufbau: {}, Samstag: {}, Abbau: {} };
-    let config = {
-        Aufbau: { aufgaben: [], zeiten: [], farben: [], limits: {} },
-        Samstag: { aufgaben: [], zeiten: [], farben: [], limits: {} },
-        Abbau: { aufgaben: [], zeiten: [], farben: [], limits: {} }
-    };
+    let daten = {}, config = {};
 
-    async function fetchData(tableId) {
-        try {
-            const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/?user_field_names=false&size=200`;
-            const res = await fetch(url, {
-                headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' }
-            });
-            const data = await res.json();
-            return data.results || [];
-        } catch(e) { console.error("Ladefehler:", e); return []; }
-    }
-
-    async function loadAll() {
-        const eintraege = await fetchData(EINTRAEGE_TABLE_ID);
-        const konfigs = await fetchData(KONFIG_TABLE_ID);
-
-        for (let t in daten) daten[t] = {};
+    async function loadData() {
+        // Daten abrufen (user_field_names=false für Feld-IDs)
+        const resE = await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=false`, { headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}` } });
+        const resK = await fetch(`https://api.baserow.io/api/database/rows/table/${KONFIG_ID}/?user_field_names=false`, { headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}` } });
         
-        // Helfer laden (hier nutzen wir die Feld-IDs, da user_field_names=false)
-        eintraege.forEach(row => {
-            const tagVal = row.field_1031614; // Passe dies an, falls dein Tag-Feld eine andere ID hat
-            if (tagVal && daten[tagVal]) {
-                const key = `${row.field_1031615}||${row.field_1031616}`;
-                if (!daten[tagVal][key]) daten[tagVal][key] = [];
-                daten[tagVal][key].push(row.field_1031617);
-            }
+        const eData = await resE.json();
+        const kData = await resK.json();
+
+        // Daten verarbeiten
+        eData.results.forEach(r => {
+            const t = r[FIELD_TAG];
+            if(!daten[t]) daten[t] = {};
+            const key = `${r[FIELD_ZEIT]}||${r[FIELD_AUFGABE]}`;
+            if(!daten[t][key]) daten[t][key] = [];
+            daten[t][key].push(r[FIELD_NAME]);
         });
 
-        // Konfig laden (Direktzugriff auf die ersten beiden Spalten)
-        konfigs.forEach(row => {
-            const values = Object.values(row).filter(v => typeof v === 'string');
-            const tag = values.find(v => config.hasOwnProperty(v));
-            const jsonStr = values.find(v => v.trim().startsWith('{'));
-            
-            if (tag && jsonStr) {
-                try { config[tag] = JSON.parse(jsonStr); } catch(e) { console.error("JSON Fehler", e); }
-            }
+        kData.results.forEach(r => {
+            // Spalte 1 = Tag, Spalte 2 = Konfig (basierend auf API-Output)
+            const tag = Object.values(r)[1];
+            const cfg = Object.values(r)[2];
+            if(tag) config[tag] = JSON.parse(cfg);
         });
         zeigeTag(currentTag);
     }
@@ -87,38 +68,34 @@
     function zeigeTag(t) {
         currentTag = t;
         const c = config[t];
-        if (!c || c.aufgaben.length === 0) {
-            document.getElementById('schichtplan').innerHTML = `<h2 style="text-align:center;">${t} konfiguriert nicht gefunden!</h2>`;
-            return;
-        }
-
-        let html = `<h2>${t}</h2><table><thead><tr><th>Aufgabe</th>` + 
-                   c.zeiten.map(z => `<th>${z}</th>`).join('') + `</tr></thead><tbody>`;
-        
-        c.aufgaben.forEach((aufg, i) => {
-            html += `<tr><th style="background:${c.farben[i] || '#fff'}">${aufg}</th>`;
-            c.zeiten.forEach(zeit => {
-                const key = `${zeit}||${aufg}`;
-                const list = daten[t][key] || [];
+        let html = `<h2>${t}</h2><table>`;
+        c.aufgaben.forEach(a => {
+            html += `<tr><th>${a}</th>`;
+            c.zeiten.forEach(z => {
+                const key = `${z}||${a}`;
+                const list = daten[t]?.[key] || [];
                 const max = c.limits[key] || 3;
-                html += `<td><strong>${list.length}/${max}</strong><ul class="helfer-list">${list.map(n => `<li>${n}</li>`).join('')}</ul>` +
-                        (list.length < max ? `<div class="input-gruppe"><input id="i-${key}" placeholder="Name"><button onclick="eintragen('${key}')">OK</button></div>` : `<div class="schicht-voll">Voll</div>`) + `</td>`;
+                html += `<td>${list.join(', ')}<br>
+                    ${list.length < max ? `<div class="input-gruppe"><input id="i-${key}" placeholder="Name"><button onclick="eintragen('${key}')">OK</button></div>` : '<span class="schicht-voll">Voll</span>'}
+                    </td>`;
             });
             html += `</tr>`;
         });
-        document.getElementById('schichtplan').innerHTML = html + `</tbody></table>`;
+        document.getElementById('schichtplan').innerHTML = html + `</table>`;
     }
 
     async function eintragen(key) {
-        const input = document.getElementById('i-' + key);
-        if(!input || !input.value.trim()) return;
-        const [zeit, aufgabe] = key.split('||');
-        // Hinweis: Bei user_field_names=false müsstest du hier die exakten field_ID's verwenden
-        // Ich habe den POST-Request für den Test hier vereinfacht
-        alert("Eintragen funktionierte in der Testphase aufgrund API-Feld-Mapping hier noch nicht. Prüfe die field_IDs!");
+        const val = document.getElementById('i-'+key).value;
+        const [z, a] = key.split('||');
+        await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=false`, {
+            method: 'POST',
+            headers: { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [FIELD_TAG]: currentTag, [FIELD_ZEIT]: z, [FIELD_AUFGABE]: a, [FIELD_NAME]: val })
+        });
+        loadData();
     }
 
-    loadAll();
+    loadData();
 </script>
 </body>
 </html>
