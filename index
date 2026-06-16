@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportring Ausflug Geiselwind</title>
+    <style>
+        html, body { height:100%; margin:0; padding:0; }
+        body { font-family: Arial, sans-serif; padding: 16px; margin:0; background: #f9f9f9; min-height:100vh;}
+        h1, h2 { text-align: center; }
+        button { padding: 12px 14px; background: #007bff; color: white; border: none; border-radius: 7px; cursor: pointer; font-size:1.07em; }
+        button:active { background: #2741b5; }
+        button:hover { background: #0056b3; }
+        #schichtplan { margin-bottom:18px;}
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 8px; }
+        th, td { border: 1px solid #ccc; padding: 8px 5px; text-align: center; vertical-align: top; }
+        th { background-color: #eee; }
+        input[type="text"], input[type="password"], input[type="number"], input[type="color"] {
+            padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size:1em; width:100%;
+            box-sizing:border-box;
+        }
+        .helfer-list { list-style: none; margin: 0; padding: 0; text-align: left; }
+        .helfer-list li { 
+            padding: 2px 4px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        
+        .btn-remove {
+            background-color: #dc3545; 
+            color: white;
+            border: none;
+            border-radius: 50%; 
+            width: 20px; 
+            height: 20px; 
+            font-size: 0.8em;
+            line-height: 1; 
+            padding: 0;
+            margin-left: 8px; 
+            cursor: pointer;
+            flex-shrink: 0; 
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+        }
+        .btn-remove:hover {
+            background-color: #c82333;
+        }
+
+        .input-gruppe { display: flex; align-items: stretch; margin-top: 5px; }
+        .input-gruppe input { flex-grow: 1; border-right: none; border-radius: 5px 0 0 5px; min-width: 50px; padding: 8px;}
+        .input-gruppe button { flex-shrink: 0; border-radius: 0 5px 5px 0; font-size: 1.1em; padding: 8px 12px;}
+
+        .schicht-voll {
+            margin-top: 10px;
+            padding: 8px;
+            font-weight: bold;
+            color: #28a745; 
+            background-color: #eaf6ec;
+            border: 1px solid #a3d9b1;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+
+        #schichtplan, .scroll-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        
+        /* Styles für Admin-Login-Bereich wieder aktivieren */
+        #loginFeld { margin-top: 9px; }
+        .admin-section { 
+            margin-top: 20px; 
+            background: #eef; 
+            padding: 14px; 
+            border-radius: 9px; 
+            max-width:700px; 
+            margin-left:auto; 
+            margin-right:auto;
+        }
+        .admin-section h2 { margin-top: 0; } 
+        .admin-section input, .admin-section button { margin-bottom:5px; } 
+
+        @media (max-width: 750px) {
+            html, body { padding:0; }
+            h1 { font-size:1.4em;}
+            button { font-size:1em; padding:10px 7px; min-width:95px;} 
+            .admin-section { padding:8px; } 
+        }
+        
+        @media (max-width:550px) {
+            #schichtplan table { font-size:0.95em; }
+            .input-gruppe { flex-direction: column; }
+            .input-gruppe input { border-right: 1px solid #ccc; border-radius: 5px 5px 0 0; text-align: center; font-size: 1.1em; padding: 10px 8px; }
+            .input-gruppe button { width: 100%; border-radius: 0 0 5px 5px; margin-top: -1px; padding: 10px 8px; }
+            th, td { padding: 6px 4px; }
+            .btn-remove { margin-left: 4px; } 
+            .admin-section { font-size:0.99em; } 
+        }
+        
+        table { min-width:520px; }
+    </style>
+</head>
+<body>
+    <h1>Sportring Ausflug Geiselwind</h1>
+    <div class="tage-buttons" style="display: none;">
+    </div>
+    <div id="schichtplan"></div>
+
+    <div style="margin-top: 18px;">
+        <button onclick="zeigeLogin()">🔑 Admin-Login</button>
+        <div id="loginFeld" style="display: none;">
+            <input id="adminPasswort" type="password" placeholder="Passwort">
+            <button onclick="adminLogin()">Einloggen</button>
+        </div>
+    </div>
+    <div id="adminBereich" class="admin-section" style="display: none;">
+        <h2>Admin-Bereich</h2>
+        <p>Hier können Admin-Funktionen verwaltet werden (aktuell nur Löschen).</p>
+    </div>
+
+
+<script>
+    // ========== BASEROW Konfiguration ==========
+    const BASEROW_API_TOKEN = "9SQnG2ofpBzKbcfzwyCUY09cCrNtUcL2"; 
+    const BASEROW_SERVER_URL = "https://api.baserow.io"; 
+    const EINTRAEGE_TABLE_ID = 594218; 
+    // ===========================================
+
+    let admin = false; 
+    let tag = 'Teams'; 
+    let isLoadingData = false;
+
+    const daten = { 'Teams': {} };
+    const config = {
+        'Teams': {
+            rollen: ['Betreuer', 'Kind'],
+            teams: ['Team 1', 'Team 2', 'Team 3', 'Team 4', 'Team 5', 'Team 6'],
+            limits: {
+                'Betreuer': 5,
+                'Kind': 10
+            }
+        }
+    };
+
+    config.Teams.teams.forEach(team => {
+        config.Teams.rollen.forEach(rolle => {
+            daten.Teams[`${team}||${rolle}`] = [];
+        });
+    });
+
+    async function fetchBaserow(method, url, body = null) {
+        const headers = { 'Authorization': `Token ${BASEROW_API_TOKEN}`, 'Content-Type': 'application/json' };
+        const options = { method, headers };
+        if (body) options.body = JSON.stringify(body);
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Baserow API Fehler: ${response.status}`, errorText);
+            throw new Error(`Baserow API Fehler: ${response.status} - ${errorText}`);
+        }
+        if (response.status === 204) return { success: true }; 
+        try { return await response.json(); } catch (e) { return { success: true }; }
+    }
+
+    async function ladeDaten() {
+        if (isLoadingData) { console.warn("ladeDaten wird bereits ausgeführt. Überspringe diesen Aufruf."); return; }
+        isLoadingData = true;
+        console.log("ladeDaten GESTARTET (Baserow)...");
+        try {
+            let allRows = [];
+            let nextUrl = `${BASEROW_SERVER_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true&size=100`;
+            while(nextUrl) {
+                try {
+                    const pageData = await fetchBaserow('GET', nextUrl);
+                    if (pageData && pageData.results) {
+                        allRows = allRows.concat(pageData.results);
+                        nextUrl = pageData.next;
+                        if (nextUrl && nextUrl.startsWith('http://')) { nextUrl = nextUrl.replace('http://', 'https://'); }
+                    } else { nextUrl = null; }
+                } catch (error) { console.error(`Paginierungs-Fehler. Stoppe.`, error); nextUrl = null; }
+            }
+            console.log(`LADEN ABGESCHLOSSEN: Insgesamt ${allRows.length} Helfer-Einträge geladen.`);
+            
+            daten.Teams = {};
+            config.Teams.teams.forEach(teamName => {
+                config.Teams.rollen.forEach(rolleName => {
+                    daten.Teams[`${teamName}||${rolleName}`] = [];
+                });
+            });
+
+            for (const row of allRows) {
+                if (!row.id || !row.Tag || !row.Team || !row.Rolle || !row.Name) { 
+                    console.warn(`Eintrag übersprungen (ID ${row.id}):`, row); 
+                    continue; 
+                };
+                
+                const tagVal = String(row.Tag).trim();
+                const teamVal = String(row.Team.value).trim();    
+                const rolleVal = String(row.Rolle.value).trim(); 
+                const nameVal = String(row.Name).trim(); 
+                
+                const key = `${teamVal}||${rolleVal}`; 
+                
+                if (tagVal === 'Teams') {
+                    if (!daten.Teams[key]) {
+                        daten.Teams[key] = [];
+                    }
+                    daten.Teams[key].push({ name: nameVal, id: row.id }); 
+                }
+            }
+            zeigeTag(tag);
+        } catch (error) {
+            alert("Fehler beim Laden der Daten (Baserow): " + error.message);
+        } finally {
+            isLoadingData = false;
+            console.log("ladeDaten ABGESCHLOSSEN (Baserow).");
+        }
+    }
+
+    function zeigeLogin() { 
+        document.getElementById('loginFeld').style.display = 'block'; 
+        document.getElementById('adminPasswort').focus(); 
+    }
+    function adminLogin() { 
+        // PASSSWORT WURDE HIER GEÄNDERT
+        if (document.getElementById('adminPasswort').value === 'SRB1925') { 
+            admin = true; 
+            document.getElementById('adminBereich').style.display = 'block'; 
+            document.getElementById('loginFeld').style.display = 'none'; 
+            zeigeTag(tag); 
+            alert("Erfolgreich als Admin eingeloggt!");
+        } else { 
+            alert("Falsches Passwort!"); 
+        } 
+    }
+
+    function zeigeTag(t) {
+        tag = String(t).trim(); 
+        const conf = config[tag];
+        if (!conf || !conf.teams?.length || !conf.rollen?.length) {
+            document.getElementById('schichtplan').innerHTML = `<h2>${tag}</h2><p>Keine Konfiguration für diesen Bereich vorhanden.</p>`;
+            return;
+        }
+
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const tbody = document.createElement('tbody');
+
+        const head = document.createElement('tr');
+        head.appendChild(document.createElement('th')); 
+        conf.teams.forEach(teamName => {
+            const th = document.createElement('th');
+            th.textContent = String(teamName).trim();
+            head.appendChild(th);
+        });
+        thead.appendChild(head);
+
+        const plan = daten[tag]; 
+
+        conf.rollen.forEach((rolle, ri) => {
+            const row = document.createElement('tr');
+            const th = document.createElement('th');
+            th.textContent = String(rolle).trim();
+            th.style.background = (rolle === 'Betreuer') ? '#e6f2ff' : '#f0f0f0'; 
+            row.appendChild(th);
+
+            conf.teams.forEach(teamName => {
+                const key = `${String(teamName).trim()}||${String(rolle).trim()}`;
+                const list = plan?.[key] || [];
+                const max = conf.limits?.[rolle] || 0; 
+                
+                const td = document.createElement('td');
+                
+                let eingabeHtml = '';
+                if (list.length < max) {
+                    eingabeHtml = 
+                        `<div class="input-gruppe">` +
+                        `<input id="name-${key}" placeholder="Name" onkeydown="if(event.key==='Enter')umschalten('${key}')">` +
+                        `<button onclick="umschalten('${key}')" title="Eintragen">✔️</button>` +
+                        `</div>`;
+                } else {
+                    eingabeHtml = `<div class="schicht-voll">✔️ Voll</div>`;
+                }
+
+                td.innerHTML = `<strong>${list.length}/${max}</strong><ul class="helfer-list">${list.map(item => `<li>${item.name} ${admin ? `<button class="btn-remove" onclick="austragen('${item.id}')">X</button>` : ''}</li>`).join('')}</ul>${eingabeHtml}`;
+                row.appendChild(td);
+            });
+            tbody.appendChild(row);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        document.getElementById('schichtplan').innerHTML = `<h2>${tag}</h2>`;
+        document.getElementById('schichtplan').appendChild(table);
+    }
+
+    async function umschalten(key) {
+        const input = document.getElementById('name-' + key);
+        const name = input.value.trim();
+        if (!name) return;
+
+        const [teamName, rolle] = key.split('||'); 
+        
+        const list = daten[tag]?.[key] || [];
+        const max = config[tag]?.limits?.[rolle] || 0; 
+
+        if (list.length >= max) {
+            alert(`Maximale Anzahl an ${rolle}n für ${teamName} bereits erreicht!`);
+            input.value = ""; 
+            return;
+        }
+
+        const rowData = { "Tag": tag, "Team": teamName, "Rolle": rolle, "Name": name };
+        
+        try {
+            const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/?user_field_names=true`;
+            await fetchBaserow('POST', url, rowData);
+            await ladeDaten(); 
+            input.value = "";
+        } catch (err) {
+            alert("Speichern fehlgeschlagen! Siehe Konsole.");
+            console.error("Fehler beim Speichern des Helfers:", err);
+        }
+    }
+
+    async function austragen(rowId) {
+        if (!admin) {
+            alert("Sie sind nicht als Admin eingeloggt und dürfen keine Einträge löschen.");
+            return;
+        }
+
+        if (!confirm("Soll dieser Eintrag wirklich gelöscht werden?")) {
+            return;
+        }
+
+        try {
+            const url = `${BASEROW_SERVER_URL}/api/database/rows/table/${EINTRAEGE_TABLE_ID}/${rowId}/?user_field_names=true`;
+            await fetchBaserow('DELETE', url);
+            console.log(`Eintrag mit ID ${rowId} erfolgreich gelöscht.`);
+            await ladeDaten(); 
+        } catch (err) {
+            alert("Fehler beim Löschen des Eintrags! Siehe Konsole.");
+            console.error("Fehler bei austragen:", err);
+        }
+    }
+
+    // Initial load
+    ladeDaten();
+</script>
+</body>
+</html>
