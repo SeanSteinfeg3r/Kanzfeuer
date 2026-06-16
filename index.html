@@ -2,87 +2,62 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sportring Kanzfeuer 2026</title>
+  <title>Sportring Kanzfeuer</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    body { font-family: sans-serif; padding: 20px; background: #eee; }
     table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-    .input-box { display: flex; gap: 5px; margin-top: 5px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
   </style>
 </head>
 <body>
-  <h1>Sportring Kanzfeuer 2026</h1>
-  <div id="schichtplan">Lade Daten...</div>
+  <h1>Schichtplan</h1>
+  <div id="btns">
+    <button onclick="load('Aufbau')">Aufbau</button>
+    <button onclick="load('Samstag')">Samstag</button>
+    <button onclick="load('Abbau')">Abbau</button>
+  </div>
+  <div id="plan"></div>
 
 <script>
     const TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
-    const EINTRAEGE_ID = 1031613;
     const KONFIG_ID = 1031612;
+    const EINTRAEGE_ID = 1031613;
 
-    // Diese IDs sind fix für deine Tabelle (siehe Baserow API Info)
-    const F_TAG = "field_1031614";
-    const F_ZEIT = "field_1031615";
-    const F_AUFGABE = "field_1031616";
-    const F_NAME = "field_1031617";
-
-    let daten = {}, config = {};
-
-    async function loadAll() {
-        const resE = await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=false`, { headers: { 'Authorization': `Token ${TOKEN}` }});
-        const resK = await fetch(`https://api.baserow.io/api/database/rows/table/${KONFIG_ID}/?user_field_names=false`, { headers: { 'Authorization': `Token ${TOKEN}` }});
+    async function load(tag) {
+        document.getElementById('plan').innerHTML = "Lade...";
         
-        const eData = await resE.json();
+        // Hole Daten mit Namen (true)
+        const resK = await fetch(`https://api.baserow.io/api/database/rows/table/${KONFIG_ID}/?user_field_names=true`, { headers: {'Authorization': 'Token '+TOKEN}});
+        const resE = await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=true`, { headers: {'Authorization': 'Token '+TOKEN}});
+        
         const kData = await resK.json();
+        const eData = await resE.json();
 
-        // 1. Einträge verarbeiten
-        eData.results.forEach(r => {
-            let t = r[F_TAG];
-            if(!daten[t]) daten[t] = {};
-            let key = `${r[F_ZEIT]}||${r[F_AUFGABE]}`;
-            if(!daten[t][key]) daten[t][key] = [];
-            daten[t][key].push(r[F_NAME]);
-        });
-
-        // 2. Config verarbeiten
-        kData.results.forEach(r => {
-            let values = Object.values(r);
-            let tag = values[1]; // Spalte Tag
-            let cfg = values[2]; // Spalte Konfig
-            if(tag) config[tag] = JSON.parse(cfg);
-        });
-
-        render('Aufbau');
-    }
-
-    function render(tag) {
-        let c = config[tag];
+        const row = kData.results.find(r => r.Tag === tag);
+        if(!row) { document.getElementById('plan').innerHTML = "Keine Konfig für "+tag; return; }
+        
+        const cfg = JSON.parse(row.Konfig);
         let html = `<h2>${tag}</h2><table>`;
-        c.aufgaben.forEach(a => {
-            html += `<tr><td>${a}</td>`;
-            c.zeiten.forEach(z => {
-                let key = `${z}||${a}`;
-                let list = daten[tag]?.[key] || [];
-                html += `<td>${list.join(', ')} 
-                    <div class="input-box"><input id="i-${key}" placeholder="Name"><button onclick="save('${tag}','${z}','${a}')">OK</button></div>
-                    </td>`;
+        cfg.aufgaben.forEach(a => {
+            html += `<tr><th>${a}</th>`;
+            cfg.zeiten.forEach(z => {
+                let e = eData.results.filter(r => r.Tag===tag && r.Zeit===z && r.Aufgabe===a);
+                html += `<td>${e.map(x => x.Name).join(', ')}<br><input id="${z}-${a}"><button onclick="save('${tag}','${z}','${a}')">OK</button></td>`;
             });
             html += `</tr>`;
         });
-        document.getElementById('schichtplan').innerHTML = html + `</table>`;
+        document.getElementById('plan').innerHTML = html + `</table>`;
     }
 
     async function save(t, z, a) {
-        let name = document.getElementById(`i-${z}||${a}`).value;
-        await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=false`, {
+        let val = document.getElementById(`${z}-${a}`).value;
+        await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=true`, {
             method: 'POST',
-            headers: { 'Authorization': `Token ${TOKEN}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ [F_TAG]: t, [F_ZEIT]: z, [F_AUFGABE]: a, [F_NAME]: name })
+            headers: {'Authorization': 'Token '+TOKEN, 'Content-Type': 'application/json'},
+            body: JSON.stringify({Tag: t, Zeit: z, Aufgabe: a, Name: val})
         });
-        loadAll();
+        load(t);
     }
-
-    loadAll();
 </script>
 </body>
 </html>
