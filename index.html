@@ -1,8 +1,128 @@
-{
-  "aufgaben": ["Aufbau"],
-  "zeiten": ["ab 15:00 Uhr"],
-  "farben": ["#ffcccc"],
-  "limits": {
-    "ab 15:00 Uhr||Aufbau": 20
-  }
-}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Helferplan Kanzfeuer</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 10px; background: #f4f4f9; margin: 0; }
+    h1 { font-size: 1.3em; text-align: center; }
+    .tage-buttons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 15px; }
+    button { padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 0.9em; cursor: pointer; flex: 1 1 30%; }
+    #schichtplan { overflow-x: auto; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background-color: #eee; }
+    .input-gruppe { display: flex; flex-direction: column; gap: 4px; }
+    input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+    .input-gruppe button { padding: 8px; background: #28a745; border-radius: 4px; border: none; color: white; cursor: pointer; }
+    .schicht-voll { color: #d9534f; font-weight: bold; }
+    .helfer-list { text-align: left; padding-left: 15px; margin: 5px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>Helferplan Kanzfeuer</h1>
+  <div class="tage-buttons">
+    <button onclick="zeigeTag('Aufbau')">Aufbau</button>
+    <button onclick="zeigeTag('Samstag')">Sa. 20.06.</button>
+    <button onclick="zeigeTag('Abbau')">Abbau</button>
+  </div>
+
+  <div id="schichtplan">Lade Daten...</div>
+
+  <script>
+    const BASEROW_TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
+    const ID_KONFIG = 1031612;
+    const ID_EINTRAEGE = 1031613;
+
+    let aktuellerTag = localStorage.getItem('letzterTag') || 'Aufbau';
+    let daten = { "Aufbau": {}, "Samstag": {}, "Abbau": {} };
+    let config = {};
+
+    async function api(method, url, body = null) {
+      const secureUrl = url.replace(/^http:\/\//i, 'https://');
+      const opt = { method, headers: { 'Authorization': 'Token ' + BASEROW_TOKEN, 'Content-Type': 'application/json' } };
+      if (body) opt.body = JSON.stringify(body);
+      const res = await fetch(secureUrl, opt);
+      return res.status === 204 ? {} : res.json();
+    }
+
+    async function ladeAlles() {
+      try {
+        const konf = await api('GET', 'https://api.baserow.io/api/database/rows/table/' + ID_KONFIG + '/?user_field_names=true');
+        konf.results.forEach(r => { config[String(r.Tag).trim()] = JSON.parse(r.Konfig); });
+
+        let alleZeilen = [];
+        let url = 'https://api.baserow.io/api/database/rows/table/' + ID_EINTRAEGE + '/?user_field_names=true&size=100';
+        while (url) {
+          const res = await api('GET', url);
+          alleZeilen = alleZeilen.concat(res.results);
+          url = res.next; 
+        }
+
+        Object.keys(daten).forEach(key => daten[key] = {});
+        alleZeilen.forEach(r => {
+          const t = String(r.Tag).trim();
+          const k = r.Zeit + "||" + r.Aufgabe;
+          if(daten[t]) { if(!daten[t][k]) daten[t][k] = []; daten[t][k].push(r.Name); }
+        });
+        zeigeTag(aktuellerTag);
+      } catch(e) { 
+        console.error(e); 
+        document.getElementById('schichtplan').innerHTML = "Fehler beim Laden. Bitte Internetverbindung prüfen.";
+      }
+    }
+
+    function zeigeTag(t) {
+      aktuellerTag = t;
+      localStorage.setItem('letzterTag', t);
+      const c = config[t];
+      const cont = document.getElementById('schichtplan');
+      if(!c) { cont.innerHTML = "<p>Keine Konfiguration für " + t + " gefunden.</p>"; return; }
+      
+      let h = "<h2>" + t + "</h2><table><tr><th>Aufgabe</th>";
+      c.zeiten.forEach(z => h += "<th>" + z + "</th>");
+      h += "</tr>";
+
+      c.aufgaben.forEach((a, i) => {
+        h += "<tr><th style='background:" + (c.farben[i] || '#eee') + "'>" + a + "</th>";
+        c.zeiten.forEach(z => {
+          const k = z + "||" + a;
+          const leute = daten[t][k] || [];
+          const m = c.limits[k] || 3;
+          h += "<td><strong>" + leute.length + "/" + m + "</strong><ul class='helfer-list'>";
+          leute.forEach(n => h += "<li>" + n + "</li>");
+          h += "</ul>";
+          
+          if(m <= 0 || leute.length >= m) {
+            h += "<div class='schicht-voll'>GESPERRT</div>";
+          } else {
+            h += `<div class='input-gruppe'><input id='in-${k}' placeholder='Name' onkeypress='if(event.key==="Enter")eintragen("${k}")'><button onclick="eintragen('${k}')">Eintragen</button></div>`;
+          }
+          h += "</td>";
+        });
+        h += "</tr>";
+      });
+      cont.innerHTML = h + "</table>";
+    }
+
+    async function eintragen(k) {
+      const inputField = document.getElementById('in-' + k);
+      const n = inputField.value.trim();
+      if(!n) return;
+      inputField.disabled = true;
+      const [z, a] = k.split('||');
+      try {
+        await api('POST', 'https://api.baserow.io/api/database/rows/table/' + ID_EINTRAEGE + '/?user_field_names=true', { "Tag": aktuellerTag, "Zeit": z, "Aufgabe": a, "Name": n });
+        ladeAlles();
+      } catch (e) {
+        alert("Fehler beim Eintragen!");
+        inputField.disabled = false;
+      }
+    }
+
+    ladeAlles();
+  </script>
+</body>
+</html>
