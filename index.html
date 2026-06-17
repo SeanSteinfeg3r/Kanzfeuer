@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Helferplan Sportring</title>
+  <title>Helferplan Kanzfeuer</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 10px; background: #f4f4f9; margin: 0; }
     h1 { font-size: 1.3em; text-align: center; }
@@ -22,7 +22,7 @@
 </head>
 <body>
 
-  <h1>Helferplan Sportring</h1>
+  <h1>Helferplan Kanzfeuer</h1>
   <div class="tage-buttons">
     <button onclick="zeigeTag('Aufbau')">Aufbau</button>
     <button onclick="zeigeTag('Samstag')">Sa. 20.06.</button>
@@ -32,9 +32,9 @@
   <div id="schichtplan">Lade Daten...</div>
 
   <script>
-    const BASEROW_TOKEN = "SvWXJIjz6eyKd1Z7REyRpCtnuCqJYPrQ";
-    const ID_EINTRAEGE = 991494;
-    const ID_KONFIG = 991493;
+    const BASEROW_TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
+    const ID_KONFIG = 1031612;
+    const ID_EINTRAEGE = 1031613;
 
     let aktuellerTag = localStorage.getItem('letzterTag') || 'Aufbau';
     let daten = { "Aufbau": {}, "Samstag": {}, "Abbau": {} };
