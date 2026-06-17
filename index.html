@@ -2,62 +2,126 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Sportring Kanzfeuer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Helferplan Festspiele vom Nordring</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #eee; }
-    table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 10px; background: #f4f4f9; margin: 0; }
+    h1 { font-size: 1.3em; text-align: center; }
+    .tage-buttons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 15px; }
+    button { padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 0.9em; cursor: pointer; flex: 1 1 30%; }
+    .btn-purple { background: #6f42c1; }
+    #schichtplan { overflow-x: auto; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background-color: #eee; }
+    .input-gruppe { display: flex; flex-direction: column; gap: 4px; }
+    input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+    .input-gruppe button { padding: 8px; background: #28a745; border-radius: 4px; border: none; color: white; cursor: pointer; }
+    .schicht-voll { color: #d9534f; font-weight: bold; }
+    .helfer-list { text-align: left; padding-left: 15px; margin: 5px 0; }
   </style>
 </head>
 <body>
-  <h1>Schichtplan</h1>
-  <div id="btns">
-    <button onclick="load('Aufbau')">Aufbau</button>
-    <button onclick="load('Samstag')">Samstag</button>
-    <button onclick="load('Abbau')">Abbau</button>
+
+  <h1>Helferplan Festspiele vom Nordring</h1>
+  <div class="tage-buttons">
+    <button onclick="zeigeTag('Aufbau')">Aufbau 11.06.</button>
+    <button onclick="zeigeTag('Freitag')">Fr 12.06.</button>
+    <button onclick="zeigeTag('Samstag')">Sa 13.06.</button>
+    <button onclick="zeigeTag('Sonntag')">So 14.06.</button>
+    <button onclick="zeigeTag('Abbau')">Abbau 15.06.</button>
+    <button class="btn-purple" onclick="zeigeVerantwortliche()">Info</button>
   </div>
-  <div id="plan"></div>
 
-<script>
-    const TOKEN = "yqYC0A9jICnAmlk7RJwIQ79Ack5UIu2O";
-    const KONFIG_ID = 1031612;
-    const EINTRAEGE_ID = 1031613;
+  <div id="schichtplan">Lade Daten...</div>
 
-    async function load(tag) {
-        document.getElementById('plan').innerHTML = "Lade...";
-        
-        // Hole Daten mit Namen (true)
-        const resK = await fetch(`https://api.baserow.io/api/database/rows/table/${KONFIG_ID}/?user_field_names=true`, { headers: {'Authorization': 'Token '+TOKEN}});
-        const resE = await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=true`, { headers: {'Authorization': 'Token '+TOKEN}});
-        
-        const kData = await resK.json();
-        const eData = await resE.json();
+  <script>
+    const BASEROW_TOKEN = "SvWXJIjz6eyKd1Z7REyRpCtnuCqJYPrQ";
+    const ID_EINTRAEGE = 991494;
+    const ID_KONFIG = 991493;
 
-        const row = kData.results.find(r => r.Tag === tag);
-        if(!row) { document.getElementById('plan').innerHTML = "Keine Konfig für "+tag; return; }
-        
-        const cfg = JSON.parse(row.Konfig);
-        let html = `<h2>${tag}</h2><table>`;
-        cfg.aufgaben.forEach(a => {
-            html += `<tr><th>${a}</th>`;
-            cfg.zeiten.forEach(z => {
-                let e = eData.results.filter(r => r.Tag===tag && r.Zeit===z && r.Aufgabe===a);
-                html += `<td>${e.map(x => x.Name).join(', ')}<br><input id="${z}-${a}"><button onclick="save('${tag}','${z}','${a}')">OK</button></td>`;
-            });
-            html += `</tr>`;
-        });
-        document.getElementById('plan').innerHTML = html + `</table>`;
+    let aktuellerTag = localStorage.getItem('letzterTag') || 'Aufbau';
+    let daten = { "Aufbau": {}, "Freitag": {}, "Samstag": {}, "Sonntag": {}, "Abbau": {} };
+    let config = {};
+
+    async function api(method, url, body = null) {
+      // Erzwinge https für alle Anfragen
+      const secureUrl = url.replace(/^http:\/\//i, 'https://');
+      const opt = { method, headers: { 'Authorization': 'Token ' + BASEROW_TOKEN, 'Content-Type': 'application/json' } };
+      if (body) opt.body = JSON.stringify(body);
+      const res = await fetch(secureUrl, opt);
+      return res.status === 204 ? {} : res.json();
     }
 
-    async function save(t, z, a) {
-        let val = document.getElementById(`${z}-${a}`).value;
-        await fetch(`https://api.baserow.io/api/database/rows/table/${EINTRAEGE_ID}/?user_field_names=true`, {
-            method: 'POST',
-            headers: {'Authorization': 'Token '+TOKEN, 'Content-Type': 'application/json'},
-            body: JSON.stringify({Tag: t, Zeit: z, Aufgabe: a, Name: val})
+    async function ladeAlles() {
+      try {
+        const konf = await api('GET', 'https://api.baserow.io/api/database/rows/table/' + ID_KONFIG + '/?user_field_names=true');
+        konf.results.forEach(r => { config[String(r.Tag).trim()] = JSON.parse(r.Konfig); });
+
+        let alleZeilen = [];
+        let url = 'https://api.baserow.io/api/database/rows/table/' + ID_EINTRAEGE + '/?user_field_names=true&size=100';
+        
+        while (url) {
+          const res = await api('GET', url);
+          alleZeilen = alleZeilen.concat(res.results);
+          url = res.next; 
+        }
+
+        Object.keys(daten).forEach(key => daten[key] = {});
+        alleZeilen.forEach(r => {
+          const t = String(r.Tag).trim();
+          const k = r.Zeit + "||" + r.Aufgabe;
+          if(daten[t]) { if(!daten[t][k]) daten[t][k] = []; daten[t][k].push(r.Name); }
         });
-        load(t);
+        
+        zeigeTag(aktuellerTag);
+      } catch(e) { console.error(e); }
     }
-</script>
+
+    function zeigeTag(t) {
+      aktuellerTag = t;
+      localStorage.setItem('letzterTag', t);
+      const c = config[t];
+      const cont = document.getElementById('schichtplan');
+      if(!c) { cont.innerHTML = "<p>Keine Konfig für " + t + "</p>"; return; }
+      
+      let h = "<h2>" + t + "</h2><table><tr><th>Aufgabe</th>";
+      c.zeiten.forEach(z => h += "<th>" + z + "</th>");
+      h += "</tr>";
+
+      c.aufgaben.forEach((a, i) => {
+        h += "<tr><th style='background:" + (c.farben[i] || '#eee') + "'>" + a + "</th>";
+        c.zeiten.forEach(z => {
+          const k = z + "||" + a;
+          const leute = daten[t][k] || [];
+          const m = c.limits[k] || 3;
+          h += "<td><strong>" + leute.length + "/" + m + "</strong><ul class='helfer-list'>";
+          leute.forEach(n => h += "<li>" + n + "</li>");
+          h += "</ul>";
+          
+          if(m <= 0 || leute.length >= m) {
+            h += "<div class='schicht-voll'>GESPERRT</div>";
+          } else {
+            h += "<div class='input-gruppe'><input id='in-" + k + "' placeholder='Name' onkeypress='if(event.key===\"Enter\")eintragen(\""+k+"\")'><button onclick=\"eintragen('"+k+"')\">Eintragen</button></div>";
+          }
+          h += "</td>";
+        });
+        h += "</tr>";
+      });
+      cont.innerHTML = h + "</table>";
+    }
+
+    async function eintragen(k) {
+      const n = document.getElementById('in-' + k).value.trim();
+      if(!n) return;
+      const [z, a] = k.split('||');
+      await api('POST', 'https://api.baserow.io/api/database/rows/table/' + ID_EINTRAEGE + '/?user_field_names=true', { "Tag": aktuellerTag, "Zeit": z, "Aufgabe": a, "Name": n });
+      ladeAlles();
+    }
+
+    function zeigeVerantwortliche() { alert("Nico Fischer (0163-9079261)"); }
+
+    ladeAlles();
+  </script>
 </body>
 </html>
